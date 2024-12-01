@@ -15,12 +15,12 @@ import static org.junit.Assert.assertThrows;
 public class ProdutoImplTest {
 
     private ProdutoImpl produtoDao;
-    private Connection mockConnection;
+    private Connection Connection;
 
     @Before
     public void setUp() {
-        mockConnection = Conexao.getConnection();
-        produtoDao = new ProdutoImpl(mockConnection);
+        Connection = Conexao.getConnection();
+        produtoDao = new ProdutoImpl(Connection);
     }
 
     @Test
@@ -31,13 +31,13 @@ public class ProdutoImplTest {
     }
 
     @Test
-    public void testAtualizarComValoresInvalidos() {
+    public void testAlterarComValoresInvalidos() {
         Produto produto = new Produto();
         produto.setId(3);
         produto.setPreco(-10);
 
-        Exception exception = assertThrows(IllegalAccessException.class, () -> produtoDao.alterar(produto));
-        assertEquals("Preco nao pode ser negativo", exception.getMessage());
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> produtoDao.alterar(produto));
+        assertEquals("Preço não pode ser negativo.", exception.getMessage());
     }
 
 }

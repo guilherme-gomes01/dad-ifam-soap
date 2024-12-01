@@ -22,6 +22,15 @@ public class ProdutoImpl implements ProdutoDao{
 
 	@Override
 	public long adicionar(Produto produto) throws SQLException {
+		if (produto == null || produto.getNome() == null || produto.getNome().isEmpty()) {
+			throw new SQLException("Produto inválido: O nome é obrigatório.");
+		}
+		if(produto.getPreco() < 0) {
+			throw new IllegalArgumentException("Somente valores positivos sao aceitos para preço");
+		}
+		if(produto.getQuantidade() < 0) {
+			throw new IllegalArgumentException("Somente valores positivos sao aceitos para quantidade");
+		}
 		Statement stmt = null;
 		long id = 0;
 		try{
@@ -45,6 +54,15 @@ public class ProdutoImpl implements ProdutoDao{
 
 	@Override
 	public Produto alterar(Produto produto) throws SQLException {
+		if (produto == null || produto.getId() <= 0) {
+			throw new IllegalArgumentException("Produto inválido: ID deve ser positivo.");
+		}
+		if (produto.getPreco() < 0) {
+			throw new IllegalArgumentException("Preço não pode ser negativo.");
+		}
+		if(produto.getQuantidade() < 0) {
+			throw new IllegalArgumentException("Quantidade de produtos não pode ser negativa.");
+		}
 		PreparedStatement stmt = null;
 		try{
 			String sql = "update produto set nome = ? , quantidade = ? , preco_unitario = ? , data_cadastro = ? "

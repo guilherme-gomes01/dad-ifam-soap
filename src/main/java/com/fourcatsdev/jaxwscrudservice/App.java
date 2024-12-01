@@ -9,6 +9,5 @@ public class App {
 		System.out.println("Publicando o serviço na porta: " + porta);
 		Endpoint.publish("http://localhost:"+porta+"/produtos", new ProdutoSIB());
 		System.out.println("Serviço publicado na porta: " + porta);
-   
     }
 }
