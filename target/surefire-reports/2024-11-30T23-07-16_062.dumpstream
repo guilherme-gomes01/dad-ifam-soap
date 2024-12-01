@@ -1,0 +1,5 @@
+# Created at 2024-11-30T23:07:17.808
+Boot Manifest-JAR contains absolute paths in classpath 'D:\Intelijei\emmestoque\emmestoque-app\target\test-classes'
+Hint: <argLine>-Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
+'other' has different root
+

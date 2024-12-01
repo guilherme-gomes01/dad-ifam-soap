@@ -1,0 +1,7 @@
+com\fourcatsdev\jaxwscrudservice\servico\ProdutoSIB.class
+com\fourcatsdev\jaxwscrudservice\util\Conexao.class
+com\fourcatsdev\jaxwscrudservice\App.class
+com\fourcatsdev\jaxwscrudservice\dao\ProdutoDao.class
+com\fourcatsdev\jaxwscrudservice\modelo\Produto.class
+com\fourcatsdev\jaxwscrudservice\servico\ProdutoSEI.class
+com\fourcatsdev\jaxwscrudservice\dao\ProdutoImpl.class
