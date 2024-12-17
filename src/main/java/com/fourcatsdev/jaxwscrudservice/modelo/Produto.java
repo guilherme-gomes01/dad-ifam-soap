@@ -5,10 +5,11 @@ import java.util.Date;
 public class Produto {
     private long id;
     private String nome;
-    private int quantidade;
-    private double preco;
+    private Integer quantidade;
+    private Double preco;
     private Date data;
 
+    // Getters e Setters
     public long getId() {
         return id;
     }
@@ -25,19 +26,19 @@ public class Produto {
         this.nome = nome;
     }
 
-    public int getQuantidade() {
+    public Integer getQuantidade() {
         return quantidade;
     }
 
-    public void setQuantidade(int quantidade) {
+    public void setQuantidade(Integer quantidade) {
         this.quantidade = quantidade;
     }
 
-    public double getPreco() {
+    public Double getPreco() {
         return preco;
     }
 
-    public void setPreco(double preco) {
+    public void setPreco(Double preco) {
         this.preco = preco;
     }
 
@@ -49,4 +50,5 @@ public class Produto {
         this.data = data;
     }
 }
+
 

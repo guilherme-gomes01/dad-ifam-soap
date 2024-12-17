@@ -8,61 +8,59 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 
 public class ProdutoImpl implements ProdutoDao{
 
+	private static final Logger logger = Logger.getLogger(ProdutoImpl.class.getName());
 	private Connection connection;
-
 	public ProdutoImpl(Connection connection) {
 		this.connection = connection;
 	}
 
-	@Override
 	public long adicionar(Produto produto) throws SQLException {
-		if (produto == null || produto.getNome() == null || produto.getNome().isEmpty()) {
-			throw new SQLException("Produto inválido: O nome é obrigatório.");
-		}
-		if(produto.getPreco() < 0) {
-			throw new IllegalArgumentException("Somente valores positivos sao aceitos para preço");
-		}
-		if(produto.getQuantidade() < 0) {
-			throw new IllegalArgumentException("Somente valores positivos sao aceitos para quantidade");
-		}
-		Statement stmt = null;
-		long id = 0;
-		try{
-			String pattern = "yyyy-MM-dd HH:mm:ss";
-			SimpleDateFormat sdf = new SimpleDateFormat(pattern);
-			String datahora = sdf.format(produto.getData());
-			String sql = "insert into produto (nome, quantidade, preco_unitario, data_cadastro)"
-					+ " values (\'"+produto.getNome()+"\',\'"+produto.getQuantidade()+"\',\'"+produto.getPreco()+"\',\'"+ datahora +"\') RETURNING ID";
-			stmt = this.connection.createStatement();
-			ResultSet rs = stmt.executeQuery(sql);
+		Long id = null;
+		String sql = "INSERT INTO produto (nome, quantidade, preco_unitario, data_cadastro) "
+				+ "VALUES (?, ?, ?, ?) RETURNING id";
+		PreparedStatement stmt = null;
+
+		try {
+			validarProduto(produto);
+			stmt = this.connection.prepareStatement(sql);
+			stmt.setString(1, produto.getNome());
+			stmt.setInt(2, produto.getQuantidade());
+			stmt.setDouble(3, produto.getPreco());
+			if (produto.getData() != null) {
+				stmt.setDate(4, new Date(produto.getData().getTime()));
+			} else {
+				stmt.setDate(4, null);
+			}
+			ResultSet rs = stmt.executeQuery();
 			if (rs.next()) {
 				id = rs.getLong(1);
+				logger.log(Level.INFO, "Produto adicionado com sucesso. ID: {0}", id);
 			}
+		} catch (IllegalArgumentException e) {
+			logger.log(Level.WARNING, "Erro de validacao: {0}", e.getMessage());
+			throw e;
 		} catch (SQLException e) {
-			e.printStackTrace();
+			logger.log(Level.SEVERE, "Erro ao inserir produto no banco de dados", e);
+			throw e;
 		} finally {
-			stmt.close();
+			if (stmt != null) {
+				stmt.close();
+			}
 		}
 		return id;
 	}
 
 	@Override
 	public Produto alterar(Produto produto) throws SQLException {
-		if (produto == null || produto.getId() <= 0) {
-			throw new IllegalArgumentException("Produto inválido: ID deve ser positivo.");
-		}
-		if (produto.getPreco() < 0) {
-			throw new IllegalArgumentException("Preço não pode ser negativo.");
-		}
-		if(produto.getQuantidade() < 0) {
-			throw new IllegalArgumentException("Quantidade de produtos não pode ser negativa.");
-		}
+		validarProduto(produto);
 		PreparedStatement stmt = null;
 		try{
 			String sql = "update produto set nome = ? , quantidade = ? , preco_unitario = ? , data_cadastro = ? "
@@ -102,7 +100,7 @@ public class ProdutoImpl implements ProdutoDao{
 
 	@Override
 	public List<Produto> listar() throws SQLException {
-		ArrayList<Produto> produtos = new ArrayList<Produto>();
+		ArrayList<Produto> produtos = new ArrayList<>();
 		Statement stmt = null;
 		try {
 			String sql = "select * from produto";
@@ -148,4 +146,21 @@ public class ProdutoImpl implements ProdutoDao{
 		}
 		return prod;
 	}
+
+	private void validarProduto(Produto produto) {
+		if (produto == null) {
+			throw new IllegalArgumentException("O produto nao pode ser nulo.");
+		}
+		if (produto.getNome() == null || produto.getNome().trim().isEmpty()) {
+			throw new IllegalArgumentException("O nome do produto e obrigatorio.");
+		}
+		if (produto.getQuantidade() < 0 || produto.getQuantidade() == null) {
+			throw new IllegalArgumentException("A quantidade nao pode ser negativa ou nula.");
+		}
+		if (produto.getPreco() < 0 || produto.getPreco() == null) {
+			throw new IllegalArgumentException("O preco unitario nao pode ser negativo ou nula.");
+		}
+	}
+
+
 }
