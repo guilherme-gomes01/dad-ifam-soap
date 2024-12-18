@@ -7,7 +7,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
-@WebFilter("/*") // Aplica o filtro a todas as requisições
+@WebFilter("/*") // Aplica o filtro a todas as requisicoes
 public class CorsFilter implements Filter {
 
     @Override
@@ -26,6 +26,9 @@ public class CorsFilter implements Filter {
         res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE");
         res.setHeader("Access-Control-Allow-Headers", "Content-Type, SOAPAction");
         res.setHeader("Access-Control-Allow-Credentials", "true");
+      //  res.setHeader("Access-Control-Allow-Origin", "http://localhost:8080");
+      //  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
 
         // Lida com pré-requisições OPTIONS
         if ("OPTIONS".equalsIgnoreCase(req.getMethod())) {
@@ -40,4 +43,6 @@ public class CorsFilter implements Filter {
     @Override
     public void destroy() {
     }
+
+
 }

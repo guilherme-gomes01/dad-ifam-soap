@@ -1,6 +1,10 @@
 package com.fourcatsdev.jaxwscrudservice.dao;
 
 import com.fourcatsdev.jaxwscrudservice.modelo.Produto;
+import jakarta.xml.soap.SOAPException;
+import jakarta.xml.soap.SOAPFactory;
+import jakarta.xml.soap.SOAPFault;
+import jakarta.xml.ws.soap.SOAPFaultException;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -11,18 +15,16 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-import java.util.logging.Level;
-
 
 public class ProdutoImpl implements ProdutoDao{
 
 	private static final Logger logger = Logger.getLogger(ProdutoImpl.class.getName());
-	private Connection connection;
+	private final Connection connection;
 	public ProdutoImpl(Connection connection) {
 		this.connection = connection;
 	}
 
-	public long adicionar(Produto produto) throws SQLException {
+	public long adicionar(Produto produto) {
 		Long id = null;
 		String sql = "INSERT INTO produto (nome, quantidade, preco_unitario, data_cadastro) "
 				+ "VALUES (?, ?, ?, ?) RETURNING id";
@@ -34,29 +36,37 @@ public class ProdutoImpl implements ProdutoDao{
 			stmt.setString(1, produto.getNome());
 			stmt.setInt(2, produto.getQuantidade());
 			stmt.setDouble(3, produto.getPreco());
+
 			if (produto.getData() != null) {
-				stmt.setDate(4, new Date(produto.getData().getTime()));
+				stmt.setDate(4, new java.sql.Date(produto.getData().getTime()));
 			} else {
-				stmt.setDate(4, null);
+				stmt.setDate(4, new java.sql.Date(System.currentTimeMillis()));
 			}
 			ResultSet rs = stmt.executeQuery();
 			if (rs.next()) {
-				id = rs.getLong(1);
-				logger.log(Level.INFO, "Produto adicionado com sucesso. ID: {0}", id);
+				id = rs.getLong("id");
 			}
+
 		} catch (IllegalArgumentException e) {
-			logger.log(Level.WARNING, "Erro de validacao: {0}", e.getMessage());
-			throw e;
+			throw criarSoapFault("ERRO_DE_VALIDACAO", e.getMessage());
 		} catch (SQLException e) {
-			logger.log(Level.SEVERE, "Erro ao inserir produto no banco de dados", e);
-			throw e;
+			throw criarSoapFault("ERRO_SQL", "Erro ao acessar o banco de dados.");
+		} catch (Exception e) {
+			throw criarSoapFault("ERRO_INTERNO", "Ocorreu um erro interno inesperado.");
 		} finally {
+			// Fecha o PreparedStatement para evitar vazamento de recursos
 			if (stmt != null) {
-				stmt.close();
+				try {
+					stmt.close();
+				} catch (SQLException e) {
+					logger.warning("Erro ao fechar o PreparedStatement: " + e.getMessage());
+				}
 			}
 		}
 		return id;
 	}
+
+
 
 	@Override
 	public Produto alterar(Produto produto) throws SQLException {
@@ -152,15 +162,27 @@ public class ProdutoImpl implements ProdutoDao{
 			throw new IllegalArgumentException("O produto nao pode ser nulo.");
 		}
 		if (produto.getNome() == null || produto.getNome().trim().isEmpty()) {
-			throw new IllegalArgumentException("O nome do produto e obrigatorio.");
+			throw new IllegalArgumentException("O nome do produto é obrigatorio.");
 		}
 		if (produto.getQuantidade() < 0 || produto.getQuantidade() == null) {
 			throw new IllegalArgumentException("A quantidade nao pode ser negativa ou nula.");
 		}
 		if (produto.getPreco() < 0 || produto.getPreco() == null) {
-			throw new IllegalArgumentException("O preco unitario nao pode ser negativo ou nula.");
+			throw new IllegalArgumentException("O preco unitario nao pode ser negativo ou nulo.");
 		}
 	}
+
+	private SOAPFaultException criarSoapFault(String codigo, String mensagem) {
+		try {
+			SOAPFault fault = SOAPFactory.newInstance().createFault();
+			fault.setFaultCode(codigo);
+			fault.setFaultString(mensagem);
+			return new SOAPFaultException(fault);
+		} catch (SOAPException e) {
+			throw new RuntimeException("Erro ao criar SOAPFault.", e);
+		}
+	}
+
 
 
 }
