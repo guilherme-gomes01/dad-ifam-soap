@@ -1,11 +1,13 @@
 package com.fourcatsdev.jaxwscrudservice.dao;
 
 import com.fourcatsdev.jaxwscrudservice.modelo.Produto;
+import jakarta.xml.soap.Detail;
 import jakarta.xml.soap.SOAPException;
 import jakarta.xml.soap.SOAPFactory;
 import jakarta.xml.soap.SOAPFault;
 import jakarta.xml.ws.soap.SOAPFaultException;
 
+import javax.xml.namespace.QName;
 import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
@@ -42,17 +44,33 @@ public class ProdutoImpl implements ProdutoDao{
 			} else {
 				stmt.setDate(4, new java.sql.Date(System.currentTimeMillis()));
 			}
+
 			ResultSet rs = stmt.executeQuery();
 			if (rs.next()) {
 				id = rs.getLong("id");
 			}
 
 		} catch (IllegalArgumentException e) {
-			throw criarSoapFault("ERRO_DE_VALIDACAO", e.getMessage());
+			throw criarSoapFault(
+					"Erro de Validacao",
+					"ERRO_DE_VALIDACAO",
+					e.getMessage()
+			);
+
 		} catch (SQLException e) {
-			throw criarSoapFault("ERRO_SQL", "Erro ao acessar o banco de dados.");
+			throw criarSoapFault(
+					"Erro ao Acessar o Banco de Dados",
+					"ERRO_SQL",
+					e.getMessage()
+			);
+
 		} catch (Exception e) {
-			throw criarSoapFault("ERRO_INTERNO", "Ocorreu um erro interno inesperado.");
+			throw criarSoapFault(
+					"Erro Interno",
+					"ERRO_INTERNO",
+					"Ocorreu um erro, tente novamente."
+			);
+
 		} finally {
 			// Fecha o PreparedStatement para evitar vazamento de recursos
 			if (stmt != null) {
@@ -67,44 +85,57 @@ public class ProdutoImpl implements ProdutoDao{
 	}
 
 
-
 	@Override
-	public Produto alterar(Produto produto) throws SQLException {
-		validarProduto(produto);
+	public Produto alterar(Produto produto) {
 		PreparedStatement stmt = null;
-		try{
-			String sql = "update produto set nome = ? , quantidade = ? , preco_unitario = ? , data_cadastro = ? "
-					+ "where id = ? ;";
+
+		try {
+			validarProduto(produto);
+			String sql = "UPDATE produto SET nome = ?, quantidade = ?, preco_unitario = ?, data_cadastro = ? "
+					+ "WHERE id = ?;";
 			stmt = this.connection.prepareStatement(sql);
 			stmt.setString(1, produto.getNome());
 			stmt.setInt(2, produto.getQuantidade());
 			stmt.setDouble(3, produto.getPreco());
 			stmt.setDate(4, new Date(produto.getData().getTime()));
 			stmt.setLong(5, produto.getId());
-			stmt.execute();
+			int rowsUpdated = stmt.executeUpdate();
+			if (rowsUpdated == 0) {
+				throw criarSoapFault("Nenhum produto encontrado com o ID especificado.", "404", "O produto com ID " + produto.getId() + " nao existe ou nao pode ser alterado.");
+			}
 			return ler(produto.getId());
+		} catch (IllegalArgumentException e) {
+			throw criarSoapFault(e.getMessage(), "400", "Erro de validacao do produto.");
 		} catch (SQLException e) {
-			e.printStackTrace();
+			throw criarSoapFault("Erro ao atualizar o produto no banco de dados.", "500", e.getMessage());
 		} finally {
-			stmt.close();
+			if (stmt != null) {
+				try {
+					stmt.close();
+				} catch (SQLException e) {
+					logger.warning("Erro ao fechar o PreparedStatement: " + e.getMessage());
+				}
+			}
 		}
-		return null;
 	}
 
 	@Override
 	public boolean apagar(Long id) throws SQLException {
-		PreparedStatement stmt = null;
-		try{
-			String sql = "delete from produto where id = ? ;";
-			stmt = this.connection.prepareStatement(sql);
-			stmt.setLong(1, id);
-			stmt.execute();
-			return true;
-		} catch (SQLException e) {
-			e.printStackTrace();
-		} finally {
-			stmt.close();
+		if (id != null) {
+			PreparedStatement stmt = null;
+			try{
+				String sql = "delete from produto where id = ? ;";
+				stmt = this.connection.prepareStatement(sql);
+				stmt.setLong(1, id);
+				stmt.execute();
+				return true;
+			} catch (SQLException e) {
+				e.printStackTrace();
+			} finally {
+				stmt.close();
+			}
 		}
+
 		return false;
 	}
 
@@ -162,7 +193,7 @@ public class ProdutoImpl implements ProdutoDao{
 			throw new IllegalArgumentException("O produto nao pode ser nulo.");
 		}
 		if (produto.getNome() == null || produto.getNome().trim().isEmpty()) {
-			throw new IllegalArgumentException("O nome do produto é obrigatorio.");
+			throw new IllegalArgumentException("O nome do produto e obrigatorio.");
 		}
 		if (produto.getQuantidade() < 0 || produto.getQuantidade() == null) {
 			throw new IllegalArgumentException("A quantidade nao pode ser negativa ou nula.");
@@ -172,17 +203,19 @@ public class ProdutoImpl implements ProdutoDao{
 		}
 	}
 
-	private SOAPFaultException criarSoapFault(String codigo, String mensagem) {
+	public static SOAPFaultException criarSoapFault(String mensagem, String codigo, String detalhes) {
 		try {
 			SOAPFault fault = SOAPFactory.newInstance().createFault();
-			fault.setFaultCode(codigo);
 			fault.setFaultString(mensagem);
+
+			if (detalhes != null && !detalhes.isEmpty()) {
+				Detail detail = fault.addDetail();
+				detail.addDetailEntry(new QName("detalhes")).addTextNode(codigo + ": " + detalhes);
+			}
 			return new SOAPFaultException(fault);
 		} catch (SOAPException e) {
-			throw new RuntimeException("Erro ao criar SOAPFault.", e);
+			throw new RuntimeException("Erro ao criar SOAPFault", e);
 		}
 	}
-
-
 
 }
